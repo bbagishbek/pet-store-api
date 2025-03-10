@@ -6,13 +6,10 @@ from models import Pet
 app = Flask(__name__)
 
 # Create a Blueprint with a URL prefix
-api_bp = Blueprint('api', __name__, url_prefix='/api')
+api = Blueprint('api', __name__, url_prefix='/api')
 
 # Enable CORS
 CORS(app)  # Allow all domains
-
-# Alternatively, specify the origin
-# CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pets.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -33,20 +30,18 @@ with app.app_context():
         db.session.add_all(pets)
         db.session.commit()
 
-# Get all pets
-@app.route('/pets', methods=['GET'])
+# 🛠 Move Routes Inside the Blueprint
+@api.route('/pets', methods=['GET'])
 def get_pets():
     pets = Pet.query.all()
     return jsonify([pet.to_dict() for pet in pets])
 
-# Get a single pet
-@app.route('/pets/<int:pet_id>', methods=['GET'])
+@api.route('/pets/<int:pet_id>', methods=['GET'])
 def get_pet(pet_id):
     pet = Pet.query.get_or_404(pet_id)
     return jsonify(pet.to_dict())
 
-# Add a new pet
-@app.route('/pets', methods=['POST'])
+@api.route('/pets', methods=['POST'])
 def add_pet():
     data = request.json
     new_pet = Pet(name=data['name'], type=data['type'], price=data['price'])
@@ -54,8 +49,7 @@ def add_pet():
     db.session.commit()
     return jsonify(new_pet.to_dict()), 201
 
-# Update an existing pet
-@app.route('/pets/<int:pet_id>', methods=['PUT'])
+@api.route('/pets/<int:pet_id>', methods=['PUT'])
 def update_pet(pet_id):
     pet = Pet.query.get_or_404(pet_id)
     data = request.json
@@ -65,20 +59,19 @@ def update_pet(pet_id):
     db.session.commit()
     return jsonify(pet.to_dict())
 
-# Delete a pet
-@app.route('/pets/<int:pet_id>', methods=['DELETE'])
+@api.route('/pets/<int:pet_id>', methods=['DELETE'])
 def delete_pet(pet_id):
     pet = Pet.query.get_or_404(pet_id)
     db.session.delete(pet)
     db.session.commit()
     return '', 204
 
-@app.route('/health', methods=['GET'])
+@api.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
-# Register the Blueprint
-app.register_blueprint(api_bp)   
- 
+# ✅ Register the Blueprint in the main app
+app.register_blueprint(api)  
+
 if __name__ == '__main__':
     app.run(debug=True)
