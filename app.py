@@ -1,9 +1,12 @@
-from flask import Flask, request, jsonify
+from flask import Flask, Blueprint, request, jsonify
 from flask_cors import CORS
 from extensions import db
 from models import Pet
 
 app = Flask(__name__)
+
+# Create a Blueprint with a URL prefix
+api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # Enable CORS
 CORS(app)  # Allow all domains
@@ -73,6 +76,9 @@ def delete_pet(pet_id):
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "healthy"}), 200
-    
+
+# Register the Blueprint
+app.register_blueprint(api_bp)   
+ 
 if __name__ == '__main__':
     app.run(debug=True)
