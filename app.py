@@ -2,6 +2,7 @@ from flask import Flask, Blueprint, request, jsonify
 from flask_cors import CORS
 from extensions import db
 from models import Pet
+import os
 
 app = Flask(__name__)
 
@@ -11,15 +12,27 @@ api = Blueprint('api', __name__, url_prefix='/api')
 # Enable CORS
 CORS(app)  # Allow all domains
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pets.db'
+# Load DB config from environment variables (set by ECS)
+DB_HOST = os.getenv('DB_HOST', 'db.petstore.internal')
+DB_PORT = os.getenv('DB_PORT', '5432')
+DB_NAME = os.getenv('DB_NAME', 'petstore')
+DB_USER = os.getenv('DB_USER', 'admin')
+DB_PASSWORD = os.getenv('DB_PASSWORD')  # Must be set in ECS secrets
+
+# Configure SQLAlchemy for MariaDB
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Check if DB_PASSWORD is missing
+if not DB_PASSWORD:
+    raise ValueError("DB_PASSWORD environment variable is not set!")
 
 db.init_app(app)
 
 # Create the database tables
 with app.app_context():
     db.create_all()
-    # Optional: Pre-populate the database
+    # Optional: Pre-populate the database (only if empty)
     if not Pet.query.first():
         pets = [
             Pet(name='Buddy', type='Dog', price=300),
@@ -71,7 +84,7 @@ def health_check():
     return jsonify({"status": "healthy"}), 200
 
 # ✅ Register the Blueprint in the main app
-app.register_blueprint(api)  
+app.register_blueprint(api)
 
 if __name__ == '__main__':
     app.run(debug=True)
