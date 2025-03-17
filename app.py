@@ -3,6 +3,11 @@ from flask_cors import CORS
 from extensions import db
 from models import Pet
 import os
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -10,40 +15,49 @@ app = Flask(__name__)
 api = Blueprint('api', __name__, url_prefix='/api')
 
 # Enable CORS
-CORS(app)  # Allow all domains
+CORS(app)
 
-# Load DB config from environment variables (set by ECS)
+# Load DB config from environment variables
 DB_HOST = os.getenv('DB_HOST', 'db.petstore.internal')
 DB_PORT = os.getenv('DB_PORT', '3306')
 DB_NAME = os.getenv('DB_NAME', 'petstore')
 DB_USER = os.getenv('DB_USER', 'admin')
-DB_PASSWORD = os.getenv('DB_PASSWORD')  # Must be set in ECS secrets
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+
+logger.info(f"DB Config: host={DB_HOST}, port={DB_PORT}, name={DB_NAME}, user={DB_USER}")
+
+# Check if DB_PASSWORD is missing
+if not DB_PASSWORD:
+    logger.error("DB_PASSWORD environment variable is not set!")
+    raise ValueError("DB_PASSWORD environment variable is not set!")
 
 # Configure SQLAlchemy for MariaDB
 app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Check if DB_PASSWORD is missing
-if not DB_PASSWORD:
-    raise ValueError("DB_PASSWORD environment variable is not set!")
-
 db.init_app(app)
 
 # Create the database tables
-with app.app_context():
-    db.create_all()
-    # Optional: Pre-populate the database (only if empty)
-    if not Pet.query.first():
-        pets = [
-            Pet(name='Buddy', type='Dog', price=300),
-            Pet(name='Mittens', type='Cat', price=150),
-            Pet(name='Goldie', type='Fish', price=25),
-            Pet(name='Tweety', type='Bird', price=50),
-        ]
-        db.session.add_all(pets)
-        db.session.commit()
+try:
+    with app.app_context():
+        logger.info("Creating database tables...")
+        db.create_all()
+        if not Pet.query.first():
+            logger.info("Pre-populating database with sample data...")
+            pets = [
+                Pet(name='Buddy', type='Dog', price=300),
+                Pet(name='Mittens', type='Cat', price=150),
+                Pet(name='Goldie', type='Fish', price=25),
+                Pet(name='Tweety', type='Bird', price=50),
+            ]
+            db.session.add_all(pets)
+            db.session.commit()
+            logger.info("Database pre-populated successfully.")
+except Exception as e:
+    logger.error(f"Failed to initialize database: {str(e)}")
+    raise
 
-# 🛠 Move Routes Inside the Blueprint
+# Routes
 @api.route('/pets', methods=['GET'])
 def get_pets():
     pets = Pet.query.all()
@@ -83,8 +97,9 @@ def delete_pet(pet_id):
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
-# ✅ Register the Blueprint in the main app
+# Register the Blueprint
 app.register_blueprint(api)
 
 if __name__ == '__main__':
+    logger.info("Starting Flask app...")
     app.run(debug=True)
