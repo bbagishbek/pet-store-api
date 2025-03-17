@@ -4,6 +4,7 @@ from extensions import db
 from models import Pet
 import os
 import logging
+from urllib.parse import quote_plus
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -26,13 +27,19 @@ DB_PASSWORD = os.getenv('DB_PASSWORD')
 
 logger.info(f"DB Config: host={DB_HOST}, port={DB_PORT}, name={DB_NAME}, user={DB_USER}")
 
+# Log all environment variables for debugging
+logger.info(f"Loaded environment variables: {os.environ}")
+
 # Check if DB_PASSWORD is missing
 if not DB_PASSWORD:
     logger.error("DB_PASSWORD environment variable is not set!")
     raise ValueError("DB_PASSWORD environment variable is not set!")
 
+# URL encode password to handle special characters
+encoded_password = quote_plus(DB_PASSWORD)
+
 # Configure SQLAlchemy for MariaDB
-app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
