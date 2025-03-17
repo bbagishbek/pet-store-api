@@ -19,10 +19,10 @@ api = Blueprint('api', __name__, url_prefix='/api')
 CORS(app)
 
 # Load DB config from environment variables
-DB_HOST = os.getenv('DB_HOST', 'db.petstore.internal')
-DB_PORT = os.getenv('DB_PORT', '3306')
-DB_NAME = os.getenv('DB_NAME', 'petstore')
-DB_USER = os.getenv('DB_USER', 'admin')
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = os.getenv('DB_PORT')
+DB_NAME = os.getenv('DB_NAME')
+DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 
 logger.info(f"DB Config: host={DB_HOST}, port={DB_PORT}, name={DB_NAME}, user={DB_USER}")
