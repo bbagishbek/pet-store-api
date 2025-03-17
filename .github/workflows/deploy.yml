@@ -36,4 +36,4 @@ jobs:
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/pet-store-api:latest
 
       - name: Deploy to ECS
-        run: aws ecs update-service --cluster pet-store-cluster --service pet-store-api-service --force-new-deployment
+        run: aws ecs update-service --cluster pet-store-ecs-cluster --service pet-store-api-service --force-new-deployment
